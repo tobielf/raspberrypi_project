@@ -22,6 +22,7 @@
 #include <wiringPiI2C.h>
 
 #include "i2c_BMP180.h"
+#include "i2c_BMP180_macro.h"
 
 #define DEBUG 0
 
@@ -84,10 +85,7 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180);
  * @param *pressure, true pressure
  * @note See Figure 4 in the datasheet for reference.
  */
-int bmp180_read_data(bmp180_module_st *bmp180, 
-                                    double *temperature,
-                                    long *pressure,
-                                    double *altitude) {
+int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
     long UT, UP, temp;
     long X1, X2, X3, B3, B5, B6, p;
     unsigned long B4, B7;
@@ -101,7 +99,7 @@ int bmp180_read_data(bmp180_module_st *bmp180,
     X2 = (bmp180->MC << 11) / (X1 + bmp180->MD);
     B5 = X1 + X2;
     temp = (B5 + 8) >> 4;
-    *temperature = (double)temp/10;
+    data->temperature = (double)temp/10;
 
     B6 = B5 - 4000;
     X1 = (bmp180->B2 * ((B6 * B6) >> 12)) >> 11;
@@ -118,8 +116,8 @@ int bmp180_read_data(bmp180_module_st *bmp180,
     X1 = (p >> 8) * (p >> 8);
     X1 = (X1 * 3038) >> 16;
     X2 = (-7357 * p) >> 16;
-    *pressure = p + ((X1 + X2 + 3791) >> 4);
-    *altitude = 44330.0 * (1.0 - pow(((double)*pressure/101325), (1/5.255)));
+    data->pressure = p + ((X1 + X2 + 3791) >> 4);
+    data->altitude = 44330.0 * (1.0 - pow(((double)data->pressure/101325), (1/5.255)));
     return 1;
 }
 

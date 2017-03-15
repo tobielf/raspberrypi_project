@@ -18,10 +18,8 @@
  */
 int main(int argc, char **argv) {
     bmp180_module_st *bmp180;
+    bmp180_data_st data;
     short OSS = 0;
-    long pressure;
-
-    double temperature, altitude;
 
     if (argc >= 2)
         OSS = (short)strtol(argv[1], NULL, 10);
@@ -31,11 +29,11 @@ int main(int argc, char **argv) {
     
     bmp180 = bmp180_module_init(OSS);
 
-    bmp180_read_data(bmp180, &temperature, &pressure, &altitude);
+    bmp180_read_data(bmp180, &data);
 
-    printf("Temperature: %.1f *C\n", temperature);
-    printf("Pressure: %ld Pa\n", pressure);
-    printf("Altitude: %.2lf Meter\n", altitude);
+    printf("Temperature: %.1f *C\n", data.temperature);
+    printf("Pressure: %ld Pa\n", data.pressure);
+    printf("Altitude: %.2lf Meter\n", data.altitude);
 
     bmp180_module_fini(bmp180);
 
