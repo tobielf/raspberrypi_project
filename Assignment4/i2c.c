@@ -17,7 +17,7 @@
  * @note Algorithm reference BMP180 Datasheet, Section 3.5, 3.6.
  */
 int main(int argc, char **argv) {
-    bmp180_data_st *bmp180;
+    bmp180_module_st *bmp180;
     short OSS = 0;
     long pressure;
 
@@ -31,9 +31,7 @@ int main(int argc, char **argv) {
     
     bmp180 = bmp180_module_init(OSS);
 
-    temperature = bmp180_read_temperature(bmp180);
-
-    pressure = bmp180_read_pressure_altitude(bmp180, &altitude);
+    bmp180_read_data(bmp180, &temperature, &pressure, &altitude);
 
     printf("Temperature: %.1f *C\n", temperature);
     printf("Pressure: %ld Pa\n", pressure);
