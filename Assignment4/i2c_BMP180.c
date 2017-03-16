@@ -26,37 +26,8 @@
 
 #define DEBUG 0
 
-#define DEVICE_ADDRESS  0x77     // device address (command: "i2cdetect -y 1")
-
-#define ULTRA_LOW_POWER         0
-#define STANDARD                1
-#define HIG_RESOLUTION          2
-#define ULTRA_HIGH_RESOLUTION   3
-
-#define A1_MSB                  0xAA
-#define A1_LSB                  0xAB
-#define A2_MSB                  0xAC
-#define A2_LSB                  0xAD
-#define A3_MSB                  0xAE
-#define A3_LSB                  0xAF
-#define A4_MSB                  0xB0
-#define A4_LSB                  0xB1
-#define A5_MSB                  0xB2
-#define A5_LSB                  0xB3
-#define A6_MSB                  0xB4
-#define A6_LSB                  0xB5
-#define B1_MSB                  0xB6
-#define B1_LSB                  0xB7
-#define B2_MSB                  0xB8
-#define B2_LSB                  0xB9
-#define MB_MSB                  0xBA
-#define MB_LSB                  0xBB
-#define MC_MSB                  0xBC
-#define MC_LSB                  0xBD
-#define MD_MSB                  0xBE
-#define MD_LSB                  0xBF
-
-// calibration data, read the datasheet for more detail.
+// calibration data, file descriptor, and OSS
+// read the datasheet for more detail.
 struct bmp180_module
 {
     int fd;
@@ -67,7 +38,10 @@ struct bmp180_module
 };
 
 // Oversampling Setting. See below for details.
-const int g_conversion_time_table[4] = {4500, 7500, 13500, 25500};
+const int g_conversion_time_table[4] = {OVERSAMPLING_TIME_0, 
+                                        OVERSAMPLING_TIME_1,
+                                        OVERSAMPLING_TIME_2,
+                                        OVERSAMPLING_TIME_3};
 
 static int s_get_conversion_time(short OSS);
 static void i2c_write_8bits(int fd, int reg, int value);
@@ -78,11 +52,8 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180);
 
 /**
  * @brief Calculate true values from uncompensated values.
- * @param bmp180, initialized module
- * @param UT, 
- * @param UP, 
- * @param *temp, true temperature
- * @param *pressure, true pressure
+ * @param bmp180, [in] initialized module
+ * @param data, [out] valid data struct needs to be filled.
  * @note See Figure 4 in the datasheet for reference.
  */
 int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
@@ -90,40 +61,47 @@ int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
     long X1, X2, X3, B3, B5, B6, p;
     unsigned long B4, B7;
     
+    // check parameters, invalid address will return EFAULT(14) bad address.
+    if (bmp180 == NULL || data == NULL)
+        return EFAULT;
+
     // read uncompensated temperature
     UT = s_read_raw_temperature(bmp180);
     // read uncompensated pressure
     UP = s_read_raw_pressure(bmp180);
 
-    X1 = ((UT - bmp180->A6) * bmp180->A5) >> 15;
-    X2 = (bmp180->MC << 11) / (X1 + bmp180->MD);
+    X1 = ((UT - bmp180->A6) * bmp180->A5) >> SHIFT_15BITS;
+    X2 = (bmp180->MC << SHIFT_11BITS) / (X1 + bmp180->MD);
     B5 = X1 + X2;
-    temp = (B5 + 8) >> 4;
-    data->temperature = (double)temp/10;
+    temp = (B5 + BMP180_CALCULATE_TRUE_T) >> SHIFT_04BITS;
+    data->temperature = (double)temp/BASE_OF_TEN;
 
     B6 = B5 - 4000;
-    X1 = (bmp180->B2 * ((B6 * B6) >> 12)) >> 11;
-    X2 = (bmp180->A2 * B6) >> 11;
+    X1 = (bmp180->B2 * ((B6 * B6) >> SHIFT_12BITS)) >> SHIFT_11BITS;
+    X2 = (bmp180->A2 * B6) >> SHIFT_11BITS;
     X3 = X1 + X2;
-    B3 = (((bmp180->A1*4+X3) << bmp180->OSS) + 2) >> 2;
-    X1 = (bmp180->A3 * B6) >> 13;
-    X2 = (bmp180->B1 * (B6 * B6 >> 12)) >> 16;
-    X3 = ((X1 + X2) + 2) >> 2;
-    B4 = (bmp180->A4 * (unsigned long)(X3 + 32768)) >> 15;
+    B3 = ((((bmp180->A1 << SHIFT_02BITS)+X3) << bmp180->OSS) + 2) >> SHIFT_02BITS;
+    X1 = (bmp180->A3 * B6) >> SHIFT_13BITS;
+    X2 = (bmp180->B1 * (B6 * B6 >> SHIFT_12BITS)) >> SHIFT_16BITS;
+    X3 = ((X1 + X2) + 2) >> SHIFT_02BITS;
+    B4 = (bmp180->A4 * (unsigned long)(X3 + (1 << SHIFT_15BITS))) >> SHIFT_15BITS;
     B7 = ((unsigned long)UP - B3) * (50000 >> bmp180->OSS);
-    p = B7 < 0x80000000 ? (B7 * 2) / B4 : (B7 / B4) * 2;
+    p = B7 < OVERFLOW_BIT ? (B7 << SHIFT_01BITS) / B4 : (B7 / B4) << SHIFT_01BITS;
 
-    X1 = (p >> 8) * (p >> 8);
-    X1 = (X1 * 3038) >> 16;
-    X2 = (-7357 * p) >> 16;
-    data->pressure = p + ((X1 + X2 + 3791) >> 4);
-    data->altitude = 44330.0 * (1.0 - pow(((double)data->pressure/101325), (1/5.255)));
+    X1 = (p >> SHIFT_08BITS) * (p >> SHIFT_08BITS);
+    X1 = (X1 * BMP180_PARAM_MG) >> SHIFT_16BITS;
+    X2 = (BMP180_PARAM_MH * p) >> SHIFT_16BITS;
+    data->pressure = p + ((X1 + X2 + BMP180_PARAM_MI) >> SHIFT_04BITS);
+    data->altitude = PRESSURE_TO_ALTITUDE_CONSTANT * 
+                        (1.0 - pow(((double)data->pressure/STANDARD_PRESSURE), 
+                                    PRESSURE_TO_ALTITUDE_INDEX));
     return 1;
 }
 
 bmp180_module_st *bmp180_module_init(short OSS) {
     int fd;
 
+    // check parameters, if out of range, set to default(0)
     if (OSS < ULTRA_LOW_POWER || OSS > ULTRA_HIGH_RESOLUTION)
         OSS = ULTRA_LOW_POWER;
 
@@ -204,35 +182,34 @@ static int i2c_read_8bits(int fd, int reg) {
 /**
  * @breif Read calibration data from the E2PROM.
  * @param fd, file descriptor to BMP180 device.
+ * @param bmp180, a valid bmp180 struct.
  * @note Quote from the Datasheet.
  * The E2PROM has stored 176 bit of individual calibration data.
  * This is used to compensate offset, temperature dependence and other parameters of the sensor.
  */
 static void s_read_calibration_data(int fd, bmp180_module_st *bmp180) {
-    bmp180->A1 = (i2c_read_8bits(fd, A1_MSB) << 8) + i2c_read_8bits(fd, A1_LSB);
-    bmp180->A2 = (i2c_read_8bits(fd, A2_MSB) << 8) + i2c_read_8bits(fd, A2_LSB);
-    bmp180->A3 = (i2c_read_8bits(fd, A3_MSB) << 8) + i2c_read_8bits(fd, A3_LSB);
-    bmp180->A4 = (i2c_read_8bits(fd, A4_MSB) << 8) + i2c_read_8bits(fd, A4_LSB);
-    bmp180->A5 = (i2c_read_8bits(fd, A5_MSB) << 8) + i2c_read_8bits(fd, A5_LSB);
-    bmp180->A6 = (i2c_read_8bits(fd, A6_MSB) << 8) + i2c_read_8bits(fd, A6_LSB);
-    bmp180->B1  = (i2c_read_8bits(fd, B1_MSB) << 8) + i2c_read_8bits(fd, B1_LSB);
-    bmp180->B2  = (i2c_read_8bits(fd, B2_MSB) << 8) + i2c_read_8bits(fd, B2_LSB);
-    bmp180->MB  = (i2c_read_8bits(fd, MB_MSB) << 8) + i2c_read_8bits(fd, MB_LSB);
-    bmp180->MC  = (i2c_read_8bits(fd, MC_MSB) << 8) + i2c_read_8bits(fd, MC_LSB);
-    bmp180->MD  = (i2c_read_8bits(fd, MD_MSB) << 8) + i2c_read_8bits(fd, MD_LSB);
-    if ( DEBUG == 1 ) printf("A1 = %d \nA2 = %d \nA3 = %d \nA4 = %d \nA5 = %d \nA6 = %d \nB1 = %d \nB2 = %d \nMB = %d \nMC = %d \nMD = %d \n", 
-     bmp180->A1, bmp180->A2, bmp180->A3, bmp180->A4, bmp180->A5, bmp180->A6, bmp180->B1, bmp180->B2, bmp180->MB, bmp180->MC, bmp180->MD);
+    bmp180->A1 = (i2c_read_8bits(fd, A1_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A1_LSB);
+    bmp180->A2 = (i2c_read_8bits(fd, A2_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A2_LSB);
+    bmp180->A3 = (i2c_read_8bits(fd, A3_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A3_LSB);
+    bmp180->A4 = (i2c_read_8bits(fd, A4_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A4_LSB);
+    bmp180->A5 = (i2c_read_8bits(fd, A5_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A5_LSB);
+    bmp180->A6 = (i2c_read_8bits(fd, A6_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, A6_LSB);
+    bmp180->B1 = (i2c_read_8bits(fd, B1_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, B1_LSB);
+    bmp180->B2 = (i2c_read_8bits(fd, B2_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, B2_LSB);
+    bmp180->MB = (i2c_read_8bits(fd, MB_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, MB_LSB);
+    bmp180->MC = (i2c_read_8bits(fd, MC_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, MC_LSB);
+    bmp180->MD = (i2c_read_8bits(fd, MD_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, MD_LSB);
 }
 
 static long s_read_raw_temperature(bmp180_module_st *bmp180) {
     int MSB, LSB;
     long UT;
     // read uncompensated temperature value.
-    i2c_write_8bits(bmp180->fd, 0xF4, 0x2E);    
-    usleep(4500);
-    MSB = i2c_read_8bits(bmp180->fd, 0xF6);
-    LSB = i2c_read_8bits(bmp180->fd, 0xF7);
-    UT = (MSB << 8) + LSB;
+    i2c_write_8bits(bmp180->fd, BMP180_CTRL_MSG_REG, BMP180_READ_TEMPERATURE);    
+    usleep(OVERSAMPLING_TIME_0);
+    MSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_MSB_REG);
+    LSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_LSB_REG);
+    UT = (MSB << SHIFT_08BITS) + LSB;
     return UT;
 }
 
@@ -241,11 +218,11 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180) {
     long UP;
     // read uncompensated pressure value.
     timing = s_get_conversion_time(bmp180->OSS);
-    i2c_write_8bits(bmp180->fd, 0xF4, 0x34 + (bmp180->OSS << 6));
+    i2c_write_8bits(bmp180->fd, BMP180_CTRL_MSG_REG, BMP180_READ_PRESSURE + (bmp180->OSS << SHIFT_06BITS));
     usleep(timing);
-    MSB = i2c_read_8bits(bmp180->fd, 0xF6);
-    LSB = i2c_read_8bits(bmp180->fd, 0xF7);
-    XLSB = i2c_read_8bits(bmp180->fd, 0xF8);
-    UP = ((MSB << 16) + (LSB << 8) + XLSB) >> (8 - bmp180->OSS);
+    MSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_MSB_REG);
+    LSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_LSB_REG);
+    XLSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_XLSB_REG);
+    UP = ((MSB << SHIFT_16BITS) + (LSB << SHIFT_08BITS) + XLSB) >> (BMP180_CALCULATE_TRUE_P - bmp180->OSS);
     return UP;
 }
