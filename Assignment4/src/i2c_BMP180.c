@@ -54,6 +54,7 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180);
  * @brief Calculate true values from uncompensated values.
  * @param bmp180, [in] initialized module
  * @param data, [out] valid data struct needs to be filled.
+ * @return 0, on success; otherwise an errno will be return.
  * @note See Figure 4 in the datasheet for reference.
  */
 int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
@@ -95,9 +96,14 @@ int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
     data->altitude = PRESSURE_TO_ALTITUDE_CONSTANT * 
                         (1.0 - pow(((double)data->pressure/STANDARD_PRESSURE), 
                                     PRESSURE_TO_ALTITUDE_INDEX));
-    return 1;
+    return 0;
 }
 
+/**
+ * @brief Initialize the module BMP180
+ * @param OSS, oversampling setting.
+ * @return bmp180, a initialized, valid module.
+ */
 bmp180_module_st *bmp180_module_init(short OSS) {
     int fd;
 
@@ -108,24 +114,27 @@ bmp180_module_st *bmp180_module_init(short OSS) {
     if ((fd = wiringPiI2CSetup(DEVICE_ADDRESS)) < 0)
         exit(errno);
 
-    bmp180_module_st *data = (bmp180_module_st *)malloc(sizeof(bmp180_module_st));
-    if (data == NULL)
+    bmp180_module_st *bmp180 = (bmp180_module_st *)malloc(sizeof(bmp180_module_st));
+    if (bmp180 == NULL)
         exit(ENOMEM);
 
-    data->fd = fd;
-    data->OSS = OSS;
+    bmp180->fd = fd;
+    bmp180->OSS = OSS;
 
     // read calibration data from the E2PROM in BMP180.
-    s_read_calibration_data(fd, data);
+    s_read_calibration_data(fd, bmp180);
 
-    return data;
+    return bmp180;
 }
 
+/**
+ * @brief Clean up the module BMP180
+ * @param bmp180, a valid module.
+ */
 void bmp180_module_fini(bmp180_module_st *bmp180) {
     if (bmp180 != NULL) {
         close(bmp180->fd);
         free(bmp180);
-        bmp180 = NULL;
     }
 }
 
@@ -201,6 +210,12 @@ static void s_read_calibration_data(int fd, bmp180_module_st *bmp180) {
     bmp180->MD = (i2c_read_8bits(fd, MD_MSB) << SHIFT_08BITS) + i2c_read_8bits(fd, MD_LSB);
 }
 
+/**
+ * @breif Read raw temperature data from the BMP180.
+ * @param bmp180, a valid bmp180 struct.
+ * @return UT, uncompensated temperature value.
+ * @note Reference from the Section3.5 in Datasheet.
+ */
 static long s_read_raw_temperature(bmp180_module_st *bmp180) {
     int MSB, LSB;
     long UT;
@@ -213,6 +228,12 @@ static long s_read_raw_temperature(bmp180_module_st *bmp180) {
     return UT;
 }
 
+/**
+ * @breif Read raw pressure data from the BMP180.
+ * @param bmp180, a valid bmp180 struct.
+ * @return UP, uncompensated pressure value.
+ * @note Reference from the Section3.5 in Datasheet.
+ */
 static long s_read_raw_pressure(bmp180_module_st *bmp180) {
     int MSB, LSB, XLSB, timing;
     long UP;
