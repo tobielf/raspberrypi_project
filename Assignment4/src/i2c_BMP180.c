@@ -2,13 +2,14 @@
  * @file i2c_BMP180.c
  * @brief Bosch BMP180 over I2C
  * @author Xiangyu Guo
- * @note datasheet https://cdn-shop.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf
- *
- *   The BMP180 consists of a piezo-resistive sensor, an analog to digital converter
- *   and a control unit with E2PROM and a serial I2C interface. 
+ * @see https://cdn-shop.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf
+ * @note
+ *   The BMP180 consists of a piezo-resistive sensor, an analog to digital 
+ *   converter and a control unit with E2PROM and a serial I2C interface. 
  *   The BMP180 delivers the uncompensated value of pressure and temperature. 
  *   The E2PROM has stored 176 bit of individual calibration data.
- *   This is used to compensate offset, temperature dependence and other parameters of the sensor.
+ *   This is used to compensate offset, temperature dependence and other 
+ *   parameters of the sensor.
  *   UP = pressure data (16 to 19 bit)
  *   UT = temperature data (16 bit)
  */
@@ -24,36 +25,41 @@
 #include "i2c_BMP180.h"
 #include "i2c_BMP180_macro.h"
 
-#define DEBUG 0
-
-// calibration data, file descriptor, and OSS
-// read the datasheet for more detail.
+/** 
+ * @brief calibration data, file descriptor, and OSS
+ * 
+ * Read the datasheet for more detail.
+ */
 struct bmp180_module
 {
-    int fd;
+    int fd;                         /**< file descriptor of the device */
     short A1, A2, A3;
     unsigned short A4, A5, A6;
     short B1, B2, MB, MC, MD;
-    short OSS;
+    short OSS;                      /**< Oversampling Settings         */
 };
 
-// Oversampling Setting. See below for details.
+/*
+ * Oversampling Setting. See below for details.
+ */
 const int g_conversion_time_table[4] = {OVERSAMPLING_TIME_0, 
                                         OVERSAMPLING_TIME_1,
                                         OVERSAMPLING_TIME_2,
                                         OVERSAMPLING_TIME_3};
-
-static int s_get_conversion_time(short OSS);
+/** ================================
+     Declaration of inner functions
+    ================================ */
 static void i2c_write_8bits(int fd, int reg, int value);
 static int i2c_read_8bits(int fd, int reg);
+static int s_get_conversion_time(short OSS);
 static void s_read_calibration_data(int fd, bmp180_module_st *bmp180);
 static long s_read_raw_temperature(bmp180_module_st *bmp180);
 static long s_read_raw_pressure(bmp180_module_st *bmp180);
 
 /**
  * @brief Calculate true values from uncompensated values.
- * @param bmp180, [in] initialized module
- * @param data, [out] valid data struct needs to be filled.
+ * @param bmp180, [in] a initialized module
+ * @param data, [out] a valid data struct needs to be filled.
  * @return 0, on success; otherwise an errno will be return.
  * @note See Figure 4 in the datasheet for reference.
  */
@@ -71,12 +77,14 @@ int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
     // read uncompensated pressure
     UP = s_read_raw_pressure(bmp180);
 
+    // calculate true temperature value
     X1 = ((UT - bmp180->A6) * bmp180->A5) >> SHIFT_15BITS;
     X2 = (bmp180->MC << SHIFT_11BITS) / (X1 + bmp180->MD);
     B5 = X1 + X2;
     temp = (B5 + BMP180_CALCULATE_TRUE_T) >> SHIFT_04BITS;
     data->temperature = (double)temp/BASE_OF_TEN;
 
+    // calculate true pressure value
     B6 = B5 - 4000;
     X1 = (bmp180->B2 * ((B6 * B6) >> SHIFT_12BITS)) >> SHIFT_11BITS;
     X2 = (bmp180->A2 * B6) >> SHIFT_11BITS;
@@ -93,6 +101,8 @@ int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
     X1 = (X1 * BMP180_PARAM_MG) >> SHIFT_16BITS;
     X2 = (BMP180_PARAM_MH * p) >> SHIFT_16BITS;
     data->pressure = p + ((X1 + X2 + BMP180_PARAM_MI) >> SHIFT_04BITS);
+
+    // convert pressure to altitude
     data->altitude = PRESSURE_TO_ALTITUDE_CONSTANT * 
                         (1.0 - pow(((double)data->pressure/STANDARD_PRESSURE), 
                                     PRESSURE_TO_ALTITUDE_INDEX));
@@ -139,22 +149,6 @@ void bmp180_module_fini(bmp180_module_st *bmp180) {
 }
 
 /**
- * @brief Get conversion time based on the OSS bit.
- * @return Time in [us].
- * @note Datasheet section 3.3.1, Table 3.
- *     Mode                OSS      Conversion time [ms]
- * ultra low power          0           4.5
- * standard                 1           7.5
- * high resolution          2           13.5
- * ultra high resolution    3           25.5
- */
-static int s_get_conversion_time(short OSS) {
-    if (OSS < ULTRA_LOW_POWER || OSS > ULTRA_HIGH_RESOLUTION)
-        OSS = ULTRA_LOW_POWER;
-    return g_conversion_time_table[OSS];
-}
-
-/**
  * @brief Write value to a 8bits register in i2c device.
  * @param fd, file descriptor to the device.
  * @param reg, register address to write.
@@ -186,6 +180,22 @@ static int i2c_read_8bits(int fd, int reg) {
         exit(errno);
     }
     return ret_val;
+}
+
+/**
+ * @brief Get conversion time based on the OSS bit.
+ * @return Time in [us].
+ * @note Datasheet section 3.3.1, Table 3.
+ *     Mode                OSS      Conversion time [ms]
+ * ultra low power          0           4.5
+ * standard                 1           7.5
+ * high resolution          2           13.5
+ * ultra high resolution    3           25.5
+ */
+static int s_get_conversion_time(short OSS) {
+    if (OSS < ULTRA_LOW_POWER || OSS > ULTRA_HIGH_RESOLUTION)
+        OSS = ULTRA_LOW_POWER;
+    return g_conversion_time_table[OSS];
 }
 
 /**
@@ -239,11 +249,13 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180) {
     long UP;
     // read uncompensated pressure value.
     timing = s_get_conversion_time(bmp180->OSS);
-    i2c_write_8bits(bmp180->fd, BMP180_CTRL_MSG_REG, BMP180_READ_PRESSURE + (bmp180->OSS << SHIFT_06BITS));
+    i2c_write_8bits(bmp180->fd, BMP180_CTRL_MSG_REG, 
+                    BMP180_READ_PRESSURE + (bmp180->OSS << SHIFT_06BITS));
     usleep(timing);
-    MSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_MSB_REG);
-    LSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_LSB_REG);
+    MSB  = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_MSB_REG);
+    LSB  = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_LSB_REG);
     XLSB = i2c_read_8bits(bmp180->fd, BMP180_ADC_OUT_XLSB_REG);
-    UP = ((MSB << SHIFT_16BITS) + (LSB << SHIFT_08BITS) + XLSB) >> (BMP180_CALCULATE_TRUE_P - bmp180->OSS);
+    UP = ((MSB << SHIFT_16BITS) + (LSB << SHIFT_08BITS) + XLSB) >> 
+                                        (BMP180_CALCULATE_TRUE_P - bmp180->OSS);
     return UP;
 }

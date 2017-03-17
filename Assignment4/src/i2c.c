@@ -3,10 +3,8 @@
  * @brief i2c communication with BMP180
  * @author Xiangyu Guo
  */
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
 
 #include "i2c_BMP180.h"
 #include "i2c_BMP180_macro.h"

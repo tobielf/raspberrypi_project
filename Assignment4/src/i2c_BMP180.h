@@ -1,22 +1,22 @@
 /**
  * @file i2c_BMP180.h
- * @brief Public function declearation and communication data.
+ * @brief Public function declaration and communication data.
  * @author Xiangyu Guo
  */
 #ifndef __I2C_BMP180_H__
 #define __I2C_BMP180_H__
 
 /**
- * communication data structure.
+ * @brief communication data structure.
  */
 typedef struct bmp180_data {
-	double temperature;
-	double altitude;
-	long pressure;
+    double temperature;         /**< temperature data */
+    double altitude;            /**< altitude data    */
+    long pressure;              /**< pressure data    */
 } bmp180_data_st;
 
 /**
- * module structure, hiding the detail to the public
+ * @brief module structure, hiding the detail to the public
  */
 typedef struct bmp180_module bmp180_module_st;
 struct bmp180_module;
@@ -27,7 +27,7 @@ struct bmp180_module;
 /**
  * @brief Initialize the module BMP180
  * @param OSS, oversampling setting.
- * @return bmp180, a initialized, valid module.
+ * @return bmp180, a initialized, valid module_st.
  */
 bmp180_module_st *bmp180_module_init(short OSS);
 /**

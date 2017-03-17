@@ -31,3 +31,7 @@
 # Debug files
 *.dSYM/
 *.su
+
+Assignment4/docs/
+
+Assignment4/doxygen.tag
