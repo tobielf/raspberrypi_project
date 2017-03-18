@@ -46,9 +46,9 @@ const int g_conversion_time_table[4] = {OVERSAMPLING_TIME_0,
                                         OVERSAMPLING_TIME_1,
                                         OVERSAMPLING_TIME_2,
                                         OVERSAMPLING_TIME_3};
-/** ================================
-     Declaration of inner functions
-    ================================ */
+/* ================================
+    Declaration of inner functions
+   ================================ */
 static void i2c_write_8bits(int fd, int reg, int value);
 static int i2c_read_8bits(int fd, int reg);
 static int s_get_conversion_time(short OSS);
@@ -58,9 +58,9 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180);
 
 /**
  * @brief Calculate true values from uncompensated values.
- * @param bmp180, [in] a initialized module
- * @param data, [out] a valid data struct needs to be filled.
- * @return 0, on success; otherwise an errno will be return.
+ * @param bmp180 [in] a initialized module
+ * @param data [out] a valid data struct needs to be filled.
+ * @return 0 on success; otherwise an errno will be return.
  * @note See Figure 4 in the datasheet for reference.
  */
 int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
@@ -111,8 +111,8 @@ int bmp180_read_data(bmp180_module_st *bmp180, bmp180_data_st *data) {
 
 /**
  * @brief Initialize the module BMP180
- * @param OSS, oversampling setting.
- * @return bmp180, a initialized, valid module.
+ * @param OSS oversampling setting.
+ * @return bmp180 a initialized, valid module.
  */
 bmp180_module_st *bmp180_module_init(short OSS) {
     int fd;
@@ -139,7 +139,7 @@ bmp180_module_st *bmp180_module_init(short OSS) {
 
 /**
  * @brief Clean up the module BMP180
- * @param bmp180, a valid module.
+ * @param bmp180 a valid module.
  */
 void bmp180_module_fini(bmp180_module_st *bmp180) {
     if (bmp180 != NULL) {
@@ -150,9 +150,9 @@ void bmp180_module_fini(bmp180_module_st *bmp180) {
 
 /**
  * @brief Write value to a 8bits register in i2c device.
- * @param fd, file descriptor to the device.
- * @param reg, register address to write.
- * @param value, the value going to write.
+ * @param fd file descriptor to the device.
+ * @param reg register address to write.
+ * @param value the value going to write.
  * @note  wiringPiI2CWriteReg8 will finally return ioctl
  *        base on the manual page of ioctl, 0 indicate success
  *        otherwise non-zero means fail.
@@ -166,9 +166,9 @@ static void i2c_write_8bits(int fd, int reg, int value) {
 
 /**
  * @brief Read value from a 8bits register in i2c device.
- * @param fd, file descriptor to the device.
- * @param reg, register address going to read.
- * @return value, the value read from the device.
+ * @param fd file descriptor to the device.
+ * @param reg register address going to read.
+ * @return value the value read from the device.
  * @note  wiringPiI2CReadReg8 will finally return ioctl
  *        and return -1 indicate fail, otherwise means success.
  */
@@ -200,8 +200,8 @@ static int s_get_conversion_time(short OSS) {
 
 /**
  * @breif Read calibration data from the E2PROM.
- * @param fd, file descriptor to BMP180 device.
- * @param bmp180, a valid bmp180 struct.
+ * @param fd file descriptor to BMP180 device.
+ * @param bmp180 a valid bmp180 struct.
  * @note Quote from the Datasheet.
  * The E2PROM has stored 176 bit of individual calibration data.
  * This is used to compensate offset, temperature dependence and other parameters of the sensor.
@@ -222,8 +222,8 @@ static void s_read_calibration_data(int fd, bmp180_module_st *bmp180) {
 
 /**
  * @breif Read raw temperature data from the BMP180.
- * @param bmp180, a valid bmp180 struct.
- * @return UT, uncompensated temperature value.
+ * @param bmp180 a valid bmp180 struct.
+ * @return UT uncompensated temperature value.
  * @note Reference from the Section3.5 in Datasheet.
  */
 static long s_read_raw_temperature(bmp180_module_st *bmp180) {
@@ -240,8 +240,8 @@ static long s_read_raw_temperature(bmp180_module_st *bmp180) {
 
 /**
  * @breif Read raw pressure data from the BMP180.
- * @param bmp180, a valid bmp180 struct.
- * @return UP, uncompensated pressure value.
+ * @param bmp180 a valid bmp180 struct.
+ * @return UP uncompensated pressure value.
  * @note Reference from the Section3.5 in Datasheet.
  */
 static long s_read_raw_pressure(bmp180_module_st *bmp180) {

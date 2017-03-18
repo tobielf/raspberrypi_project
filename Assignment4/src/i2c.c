@@ -13,7 +13,7 @@
  * @brief Read temperature and pressure from BMP180 using wiringPi.
  * @param argc numbers of arguments.
  * @param argv arguments vector.
- * @return 0, on success; otherwise errno.
+ * @return 0 on success; otherwise errno.
  * @note Algorithm reference BMP180 Datasheet, Section 3.5, 3.6.
  */
 int main(int argc, char **argv) {
