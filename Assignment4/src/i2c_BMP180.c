@@ -158,7 +158,7 @@ void bmp180_module_fini(bmp180_module_st *bmp180) {
  *        otherwise non-zero means fail.
  */
 static void i2c_write_8bits(int fd, int reg, int value) {
-    if (wiringPiI2CWriteReg8(fd, reg, value)) {
+    if (wiringPiI2CWriteReg8(fd, reg, value) == -1) {
         printf("%s\n", strerror(errno));
         exit(errno);
     }
