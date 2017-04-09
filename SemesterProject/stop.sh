@@ -1,0 +1,2 @@
+killall homebridge
+killall smarthomed
