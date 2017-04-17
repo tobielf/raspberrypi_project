@@ -12,6 +12,7 @@ LDLIBS    = -levent -lwiringPi -lwiringPiDev -lpthread -lm
 
 SRC = smarthomed.c \
 	  screen.c \
+	  web_server.c \
 	  i2c/i2c_lib.c \
 	  i2c/i2c_lcd1620.c \
 	  i2c/i2c_bmp180.c \
