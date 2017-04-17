@@ -1,5 +1,8 @@
 /**
  * @file pin_motor.c
+ * @brief Implementation of motor library.
+ *        Turn on/off the motor using L293D
+ * @author Xiangyu Guo
  */
 #include <errno.h>
 #include <stdlib.h>
@@ -7,9 +10,9 @@
 
 #include "pin_motor.h"
 
-#define MOTOR_1_LEFT        21      /**< Control pin 7 on L293D,using GPIO 21 */
-#define MOTOR_1_RIGTH       22      /**< Control pin 2 on L293D,using GPIO 22 */
-#define MOTOR_1_ENABLE      23      /**< Control pin 1 on L293D,using GPIO 23 */
+#define MOTOR_1_LEFT        (21)      /**< Control pin 7 on L293D,using GPIO 21 */
+#define MOTOR_1_RIGTH       (22)      /**< Control pin 2 on L293D,using GPIO 22 */
+#define MOTOR_1_ENABLE      (23)      /**< Control pin 1 on L293D,using GPIO 23 */
 
 static int initialized = LOW;
 

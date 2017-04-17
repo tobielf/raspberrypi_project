@@ -26,9 +26,10 @@
 #include "pin/pin_motor.h"
 #include "pin/pin_dht_11.h"
 
+#include "screen.h"
+
 #define MAX_LIGHT_BOUNDRY   (4)     // LED from 0 - 7, 8 in total.
 
-#define STARTSTOP_BUTTON    (6)     // Using GPIO 16 as start/stop control
 #define MOTION_DETECTOR     (29)
 #define MECURY_SWITCH       (27)
 
@@ -94,7 +95,8 @@ temperature_request_cb(struct evhttp_request *req, void *arg)
     bmp180 = bmp180_module_init(3);
     bmp180_read_data(bmp180, &value);
     evb = evbuffer_new();
-    evbuffer_add_printf(evb, "{\"temperature\": %.1f, \"humidity\": 38}", value.temperature);
+    evbuffer_add_printf(evb, "{\"temperature\": %.1f, \"humidity\": 38}", 
+                        value.temperature);
     evhttp_send_reply(req, 200, "OK", evb);
     bmp180_module_fini(bmp180);
     evbuffer_free(evb);
@@ -104,12 +106,14 @@ static void
 temp_humi_request_cb(struct evhttp_request *req, void *arg)
 {
     struct evbuffer *evb = NULL;
-    char str[255];
+    dht_data_st value;
 
     pin_dht_11_init();
-    pin_dht_11_read(str);
+    pin_dht_11_read(&value);
+
     evb = evbuffer_new();
-    evbuffer_add_printf(evb, "%s", str);
+    evbuffer_add_printf(evb, "{\"temperature\": %.2f, \"humidity\": %.2f}", 
+                        value.temperature, value.humidity);
     evhttp_send_reply(req, 200, "OK", evb);
 
     evbuffer_free(evb);
@@ -225,9 +229,6 @@ static void
 setupMotor() {
     motor_setup_up();
 
-    if (wiringPiISR(STARTSTOP_BUTTON, INT_EDGE_FALLING, &isrStartStopButton) < 0)
-        exit(errno);
-
     //if (wiringPiISR(MOTION_DETECTOR, INT_EDGE_FALLING, &isrChangeDirectionButton) < 0)
     //    exit(errno);
 
@@ -254,6 +255,7 @@ main(int argc, char **argv)
 
     setupWiringPi();
     setupMotor();
+    screen_display_get_instance();
 
     base = event_base_new();
     if (!base) {

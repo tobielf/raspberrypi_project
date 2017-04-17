@@ -11,7 +11,8 @@ LDFLAGS	= -L/usr/local/lib
 LDLIBS    = -levent -lwiringPi -lwiringPiDev -lpthread -lm
 
 SRC = smarthomed.c \
-      i2c/i2c_lib.c \
+	  screen.c \
+	  i2c/i2c_lib.c \
 	  i2c/i2c_lcd1620.c \
 	  i2c/i2c_bmp180.c \
 	  spi/spi_mcp3208.c \
