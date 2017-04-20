@@ -6,6 +6,8 @@
 #ifndef __I2C_LCD1620_H__
 #define __I2C_LCD1620_H__
 
+#define LCD1620_CHARS_PER_LINE  (16)            /**< Maximum Chars per line */
+
 /**
  * @brief module structure, hiding the detail to the public
  */

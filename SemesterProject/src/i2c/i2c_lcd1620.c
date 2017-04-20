@@ -43,8 +43,8 @@ static void s_lcd1620_send_data(lcd1620_module_st *lcd1620, int data, int rs);
  * @param lcd1620 a valid module
  */
 void lcd1620_module_clear(lcd1620_module_st *lcd1620) {
-    // i2c_write(lcd1620->fd, LCD_CLEARDISPLAY);
-    // i2c_write(lcd1620->fd, LCD_RETURNHOME);
+    i2c_write(lcd1620->fd, LCD_CLEARDISPLAY);
+    i2c_write(lcd1620->fd, LCD_RETURNHOME);
     s_lcd1620_send_data(lcd1620, LCD_CLEARDISPLAY, 0);
 }
 
@@ -57,8 +57,9 @@ void lcd1620_module_clear(lcd1620_module_st *lcd1620) {
  * @param length the length of the output string.
  * @return the length successfully write to the display.
  */
-int lcd1620_module_write_string(lcd1620_module_st *lcd1620, int x, int y, char *str, int length) {
-    int addr, i;
+int lcd1620_module_write_string(lcd1620_module_st *lcd1620, 
+                                int x, int y, char *str, int length) {
+    int addr, i = 0;
     x = x & 15;
     y = y & 1;
 
@@ -136,3 +137,14 @@ static void s_lcd1620_send_data(lcd1620_module_st *lcd1620, int data, int rs) {
     s_lcd1620_write_word(lcd1620, buf);
 }
 
+#ifdef XTEST
+
+int main() {
+    lcd1620_module_st *lcd1620 = lcd1620_module_init();
+    lcd1620_module_write_string(lcd1620, 0, 0, "Hello:", strlen("Hello:"));
+    lcd1620_module_write_string(lcd1620, 3, 1, "World!", strlen("World!"));
+    lcd1620_module_fini(lcd1620);
+    return 0;
+}
+
+#endif

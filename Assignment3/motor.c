@@ -9,11 +9,11 @@
 #include <signal.h>
 #include <wiringPi.h>
 
-#define MOTOR_1_LEFT        4       // Control pin 7 on L293D,using GPIO 4
-#define MOTOR_1_RIGTH       5       // Control pin 2 on L293D,using GPIO 5
-#define MOTOR_1_ENABLE      6       // Control pin 1 on L293D,using GPIO 6
-#define DIRECTION_BUTTON    15      // Using GPIO 15 as direction control
-#define STARTSTOP_BUTTON    16      // Using GPIO 16 as start/stop control
+#define MOTOR_1_LEFT        21      // Control pin 7 on L293D,using GPIO 4
+#define MOTOR_1_RIGTH       22      // Control pin 2 on L293D,using GPIO 5
+#define MOTOR_1_ENABLE      23      // Control pin 1 on L293D,using GPIO 6
+#define DIRECTION_BUTTON    5       // Using GPIO 15 as direction control
+#define STARTSTOP_BUTTON    6       // Using GPIO 16 as start/stop control
 #define INTERRUPT_INTERVAL  200     // Bouncing Interval
 
 /**
@@ -108,6 +108,7 @@ int main()
             digitalWrite(g_new_direction ? MOTOR_1_LEFT : MOTOR_1_RIGTH, 1);
             g_current_direction = g_new_direction;
         }
+        delay(10);
     }
     return 0;
 }

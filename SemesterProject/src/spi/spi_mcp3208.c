@@ -15,6 +15,7 @@
 #include "spi_mcp3208.h"
 
 #define MCP3208_MIN_SPEED           (100000)/**< MCP3208 Minium Frequency */
+#define MCP3208_CHIP_NUMBER         (0)     /**< MCP3208 CHIP EABLE0(CE0) */
 #define MCP3208_CHANNEL_NUMBERS     (0x07)  /**< MCP3208 total channels */
 #define MCP3208_START_BIT           (0x04)  /**< MCP3208 Start signal */
 #define MCP3208_SINGLE_BIT          (0x02)  /**< MCP3208 Single mode */
@@ -23,6 +24,8 @@
 #define SHIFT_02BITS                (2)     /**< Shifting 02 bits */
 #define SHIFT_06BITS                (6)     /**< Shifting 06 bits */
 #define SHIFT_08BITS                (8)     /**< Shifting 08 bits */
+
+static mcp3208_module_st *g_instance = NULL;    /**< instance of mcp3208 */
 
 /** 
  * @brief chip number, file descriptor, and speed
@@ -42,7 +45,61 @@ struct mcp3208_module
  * @param speed chip communication speed, in Hz.
  * @return mcp3208 a initialized, valid mcp3208_module_st.
  */
-mcp3208_module_st *mcp3208_module_init(unsigned int chip_number, unsigned int speed) {
+static mcp3208_module_st *mcp3208_module_init(unsigned int chip_number,
+                                              unsigned int speed);
+
+/**
+ * @brief Get an instance of the module MCP3208
+ * @return mcp3208 a initialized, valid mcp3208_module_st.
+ */
+mcp3208_module_st *mcp3208_module_get_instance() {
+    if (g_instance == NULL)
+        g_instance = mcp3208_module_init(MCP3208_CHIP_NUMBER, MCP3208_MIN_SPEED);
+    return g_instance;
+}
+
+/**
+ * @brief Clean up the module mcp3208
+ */
+void mcp3208_module_clean_up() {
+    if (g_instance != NULL) {
+        close(g_instance->fd);
+        free(g_instance);
+    }
+}
+
+/**
+ * @brief Read the value from ADC based on the specified channel.
+ * @param mcp3208 initialized module.
+ * @param channel valid channel number[0-7].
+ * @return 0-4096 on success; otherwise exit with an error number.
+ */
+int mcp3208_read_data(mcp3208_module_st *mcp3208, unsigned int channel) {
+    unsigned char buff[3];
+    int ret = 0;
+
+    if (mcp3208 == NULL)
+        return 0;
+
+    channel &= MCP3208_CHANNEL_NUMBERS;
+
+    buff[0] = MCP3208_START_BIT | MCP3208_SINGLE_BIT | (channel >> SHIFT_02BITS);
+    buff[1] = channel << SHIFT_06BITS;
+    buff[2] = 0;
+
+    if(wiringPiSPIDataRW(mcp3208->chip_number, buff, 3) == -1) {
+        fprintf(stderr, "MCP3208 Read/Write Failed: %s\n", strerror(errno));
+        exit(errno);
+    }
+
+    buff[1] = MCP3208_MASK_04BITS & buff[1];
+    ret = (buff[1] << SHIFT_08BITS) | buff[2];
+
+    return ret;
+}
+
+static mcp3208_module_st *mcp3208_module_init(unsigned int chip_number, 
+                                              unsigned int speed) {
     int fd;
     mcp3208_module_st *mcp3208;
 
@@ -70,43 +127,19 @@ mcp3208_module_st *mcp3208_module_init(unsigned int chip_number, unsigned int sp
     return mcp3208;
 }
 
-/**
- * @brief Clean up the module mcp3208
- * @param mcp3208 a valid module.
- */
-void mcp3208_module_fini(mcp3208_module_st *mcp3208) {
-    if (mcp3208 != NULL) {
-        close(mcp3208->fd);
-        free(mcp3208);
-    }
-}
+#ifdef XTEST
 
-/**
- * @brief Read the value from ADC based on the specified channel.
- * @param mcp3208 initialized module.
- * @param channel valid channel number[0-7].
- * @return 0-4096 on success; otherwise exit with an error number.
- */
-int mcp3208_read_data(mcp3208_module_st *mcp3208, unsigned int channel) {
-    unsigned char buff[3];
-    int ret = 0;
-
-    if (mcp3208 == NULL)
-        return 0;
-
-    channel &= MCP3208_CHANNEL_NUMBERS;
-
-    buff[0] = MCP3208_START_BIT | MCP3208_SINGLE_BIT | (channel >> SHIFT_02BITS);
-    buff[1] = channel << SHIFT_06BITS;
-    buff[2] = 0;
-
-    if(wiringPiSPIDataRW(mcp3208->chip_number, buff, 3) == -1) {
-        fprintf(stderr, "%s\n", strerror(errno));
-        exit(errno);
+int main() {
+    int channel;
+    int value;
+    mcp3208_module_st *mcp3208 = mcp3208_module_get_instance();
+    for (channel = MCP3208_CHANNEL_0; channel <= MCP3208_CHANNEL_7; channel++) {
+        value = mcp3208_read_data(mcp3208, channel);
+        printf("Value on channel: %d is %d\n", channel, value);
     }
 
-    buff[1] = MCP3208_MASK_04BITS & buff[1];
-    ret = (buff[1] << SHIFT_08BITS) | buff[2];
-
-    return ret;
+    mcp3208_module_clean_up();
+    return 0;
 }
+
+#endif

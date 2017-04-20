@@ -1,3 +1,8 @@
+/**
+ * @file web_server.c
+ * @brief implementation of web server.
+ * @author Xiangyu Guo
+ */
 #include <stdlib.h>
 #include <string.h>
 
@@ -23,11 +28,78 @@
 
 #include "web_server.h"
 
-#define MAX_LIGHT_BOUNDRY   (4)     // LED from 0 - 7, 8 in total.
+#define MAX_LIGHT_BOUNDRY       (4)     /**< LED from 0 - 4, 5 in total. */
 
-char uri_root[512];
+#define LED_STATUS_THRESHOLD    (100)   /**< LED off status */
 
-const int g_led_pins[MAX_LIGHT_BOUNDRY + 1] = {7, 0, 2, 3, 25};
+const int g_led_pins[MAX_LIGHT_BOUNDRY + 1] = {7, 0, 2, 3, 25}; /**< LED on GPIO*/
+
+/**
+ * ===========================================
+ * Call back functions handle the http request
+ * ===========================================
+ */
+static void switch_request_cb(struct evhttp_request *req, void *arg);
+
+static void status_request_cb(struct evhttp_request *req, void *arg);
+
+static void temperature_request_cb(struct evhttp_request *req, void *arg);
+
+static void temp_humi_request_cb(struct evhttp_request *req, void *arg);
+
+static void dump_request_cb(struct evhttp_request *req, void *arg);
+
+/**
+ * @brief setup the wiringPi
+ */
+static void setup_wiringPi(void);
+
+/**
+ * @brief setting up the web server
+ * @param base event base.
+ * @return 0 on success, otherwise errno
+ */
+int web_server_init(struct event_base *base) {
+    struct evhttp *http;
+    struct evhttp_bound_socket *handle;
+
+    ev_uint16_t port = 80;
+
+    setup_wiringPi();
+
+    /* Create a new evhttp object to handle requests. */
+    http = evhttp_new(base);
+    if (!http) {
+        fprintf(stderr, "couldn't create evhttp. Exiting.\n");
+        return errno;
+    }
+
+    
+    evhttp_set_cb(http, "/status", status_request_cb, NULL);
+
+    evhttp_set_cb(http, "/switch/on", switch_request_cb, "on");
+
+    evhttp_set_cb(http, "/switch/off", switch_request_cb, "off");
+
+    evhttp_set_cb(http, "/motor/on", switch_request_cb, "on");
+
+    evhttp_set_cb(http, "/motor/off", switch_request_cb, "off");
+
+    evhttp_set_cb(http, "/temp/status", temperature_request_cb, NULL);
+
+    evhttp_set_cb(http, "/temp_humi/status", temp_humi_request_cb, NULL);
+
+    /* The /dump URI will dump all requests to stdout and say 200 ok. */
+    evhttp_set_gencb(http, dump_request_cb, NULL);
+
+    /* Now we tell the evhttp what port to listen on */
+    handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
+    if (!handle) {
+        fprintf(stderr, "couldn't bind to port %d. Exiting.\n", (int)port);
+        return errno;
+    }
+    return 0;
+}
 
 static void
 switch_request_cb(struct evhttp_request *req, void *arg)
@@ -61,17 +133,17 @@ status_request_cb(struct evhttp_request *req, void *arg)
 
     q = evhttp_find_header (&headers, "led");
 
-    mcp3208 = mcp3208_module_init(0, 100000);
+    mcp3208 = mcp3208_module_get_instance();
     int value = mcp3208_read_data(mcp3208, atoi(q));
 
     evhttp_request_get_uri(req);
     evb = evbuffer_new();
-    if (value < 100)
+    if (value < LED_STATUS_THRESHOLD)
         evbuffer_add_printf(evb, "0\n");
     else
         evbuffer_add_printf(evb, "1\n");
+
     evhttp_send_reply(req, 200, "OK", evb);
-    mcp3208_module_fini(mcp3208);
     evbuffer_free(evb);
 }
 
@@ -82,10 +154,10 @@ temperature_request_cb(struct evhttp_request *req, void *arg)
     bmp180_module_st *bmp180 = NULL;
     bmp180_data_st value;
 
-    bmp180 = bmp180_module_init(3);
+    bmp180 = bmp180_module_init(BMP180_ULTRA_HIGH_RESOLUTION);
     bmp180_read_data(bmp180, &value);
     evb = evbuffer_new();
-    evbuffer_add_printf(evb, "{\"temperature\": %.1f, \"humidity\": 38}", 
+    evbuffer_add_printf(evb, "{\"temperature\": %.1f, \"humidity\": 0}", 
                         value.temperature);
     evhttp_send_reply(req, 200, "OK", evb);
     bmp180_module_fini(bmp180);
@@ -156,7 +228,7 @@ dump_request_cb(struct evhttp_request *req, void *arg)
 }
 
 static void
-setupWiringPi(void) {
+setup_wiringPi(void) {
     int i, led;
 
     if (wiringPiSetup() < 0)
@@ -167,86 +239,4 @@ setupWiringPi(void) {
         pinMode(led, OUTPUT);
         digitalWrite(led, 0);
     }
-}
-
-int web_server_init(struct event_base *base) {
-    struct evhttp *http;
-    struct evhttp_bound_socket *handle;
-
-    ev_uint16_t port = 80;
-
-    setupWiringPi();
-
-    /* Create a new evhttp object to handle requests. */
-    http = evhttp_new(base);
-    if (!http) {
-        fprintf(stderr, "couldn't create evhttp. Exiting.\n");
-        return 1;
-    }
-
-    /* The /dump URI will dump all requests to stdout and say 200 ok. */
-    evhttp_set_cb(http, "/status", status_request_cb, NULL);
-
-    evhttp_set_cb(http, "/switch/on", switch_request_cb, "on");
-
-    evhttp_set_cb(http, "/switch/off", switch_request_cb, "off");
-
-    evhttp_set_cb(http, "/motor/on", switch_request_cb, "on");
-
-    evhttp_set_cb(http, "/motor/off", switch_request_cb, "off");
-
-    evhttp_set_cb(http, "/temp/status", temperature_request_cb, NULL);
-
-    evhttp_set_cb(http, "/temp_humi/status", temp_humi_request_cb, NULL);
-
-    /* We want to accept arbitrary requests, so we need to set a "generic"
-     * cb.  We can also add callbacks for specific paths. */
-    evhttp_set_gencb(http, dump_request_cb, NULL);
-
-    /* Now we tell the evhttp what port to listen on */
-    handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
-    if (!handle) {
-        fprintf(stderr, "couldn't bind to port %d. Exiting.\n",
-            (int)port);
-        return 1;
-    }
-
-    {
-        /* Extract and display the address we're listening on. */
-        struct sockaddr_storage ss;
-        evutil_socket_t fd;
-        ev_socklen_t socklen = sizeof(ss);
-        char addrbuf[128];
-        void *inaddr;
-        const char *addr;
-        int got_port = -1;
-        fd = evhttp_bound_socket_get_fd(handle);
-        memset(&ss, 0, sizeof(ss));
-        if (getsockname(fd, (struct sockaddr *)&ss, &socklen)) {
-            perror("getsockname() failed");
-            return 1;
-        }
-        if (ss.ss_family == AF_INET) {
-            got_port = ntohs(((struct sockaddr_in*)&ss)->sin_port);
-            inaddr = &((struct sockaddr_in*)&ss)->sin_addr;
-        } else if (ss.ss_family == AF_INET6) {
-            got_port = ntohs(((struct sockaddr_in6*)&ss)->sin6_port);
-            inaddr = &((struct sockaddr_in6*)&ss)->sin6_addr;
-        } else {
-            fprintf(stderr, "Weird address family %d\n",
-                ss.ss_family);
-            return 1;
-        }
-        addr = evutil_inet_ntop(ss.ss_family, inaddr, addrbuf,
-            sizeof(addrbuf));
-        if (addr) {
-            printf("Listening on %s:%d\n", addr, got_port);
-            evutil_snprintf(uri_root, sizeof(uri_root),
-                "http://%s:%d",addr,got_port);
-        } else {
-            fprintf(stderr, "evutil_inet_ntop failed\n");
-            return 1;
-        }
-    }
-    return 0;
 }

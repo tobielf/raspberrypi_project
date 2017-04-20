@@ -12,22 +12,28 @@
 typedef struct mcp3208_module mcp3208_module_st;
 struct mcp3208_module;
 
+#define MCP3208_MAX_VALUE           (4095.0)        /**< Max digital value read from ADC */
+#define MCP3208_CHANNEL_0           (0)             /**< Channel 0 on ADC */
+#define MCP3208_CHANNEL_1           (1)             /**< Channel 1 on ADC */
+#define MCP3208_CHANNEL_2           (2)             /**< Channel 2 on ADC */
+#define MCP3208_CHANNEL_3           (3)             /**< Channel 3 on ADC */
+#define MCP3208_CHANNEL_4           (4)             /**< Channel 4 on ADC */
+#define MCP3208_CHANNEL_5           (5)             /**< Channel 5 on ADC */
+#define MCP3208_CHANNEL_6           (6)             /**< Channel 6 on ADC */
+#define MCP3208_CHANNEL_7           (7)             /**< Channel 7 on ADC */
 /* ==============================================
 	device module initialize and finish function 
    ============================================== */
 /**
- * @brief Initialize the module MCP3208
- * @param chip_number chip number on Raspberrypi pin, 0 or 1.
- * @param speed chip communication speed, in Hz.
+ * @brief Get an instance of the module MCP3208
  * @return mcp3208 a initialized, valid mcp3208_module_st.
  */
-mcp3208_module_st *mcp3208_module_init(unsigned int chip_number, unsigned int speed);
+mcp3208_module_st *mcp3208_module_get_instance();
 
 /**
  * @brief Clean up the module mcp3208
- * @param mcp3208 a valid module.
  */
-void mcp3208_module_fini(mcp3208_module_st *mcp3208);
+void mcp3208_module_clean_up();
 
 /* =================
     device function 

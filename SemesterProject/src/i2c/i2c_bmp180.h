@@ -6,13 +6,18 @@
 #ifndef __I2C_BMP180_H__
 #define __I2C_BMP180_H__
 
+#define BMP180_ULTRA_LOW_POWER             (0)     /**< Ultra low power mode       */
+#define BMP180_STANDARD                    (1)     /**< Standard mode              */
+#define BMP180_HIGH_RESOLUTION             (2)     /**< High resolution mode       */
+#define BMP180_ULTRA_HIGH_RESOLUTION       (3)     /**< Ultra high resolution mode */
+
 /**
  * @brief communication data structure.
  */
 typedef struct bmp180_data {
     double temperature;         /**< temperature data */
     double altitude;            /**< altitude data    */
-    long pressure;              /**< pressure data    */
+    double pressure;            /**< pressure data    */
 } bmp180_data_st;
 
 /**

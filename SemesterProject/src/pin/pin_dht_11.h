@@ -7,8 +7,8 @@
 #define __PIN_DHT_11_H__
 
 typedef struct dht_data {
-    double temperature;
-    double humidity;
+    double temperature;             /**< temperature data */
+    double humidity;                /**< humidity data */
 } dht_data_st;
 
 /**

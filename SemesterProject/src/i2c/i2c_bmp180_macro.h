@@ -11,11 +11,6 @@
    =========== */
 #define DEVICE_ADDRESS              (0x77)  /**< device address */
 
-#define ULTRA_LOW_POWER             (0)     /**< Ultra low power mode       */
-#define STANDARD                    (1)     /**< Standard mode              */
-#define HIGH_RESOLUTION             (2)     /**< High resolution mode       */
-#define ULTRA_HIGH_RESOLUTION       (3)     /**< Ultra high resolution mode */
-
 #define SHIFT_01BITS                (1)     /**< Shifting 01 bits */
 #define SHIFT_02BITS                (2)     /**< Shifting 02 bits */
 #define SHIFT_04BITS                (4)     /**< Shifting 04 bits */

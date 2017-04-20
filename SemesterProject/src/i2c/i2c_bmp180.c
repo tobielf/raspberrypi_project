@@ -117,8 +117,8 @@ bmp180_module_st *bmp180_module_init(short OSS) {
     int fd;
 
     // check parameters, if out of range, set to default(0)
-    if (OSS < ULTRA_LOW_POWER || OSS > ULTRA_HIGH_RESOLUTION)
-        OSS = ULTRA_LOW_POWER;
+    if (OSS < BMP180_ULTRA_LOW_POWER || OSS > BMP180_ULTRA_HIGH_RESOLUTION)
+        OSS = BMP180_ULTRA_LOW_POWER;
 
     if ((fd = wiringPiI2CSetup(DEVICE_ADDRESS)) < 0)
         exit(errno);
@@ -158,8 +158,8 @@ void bmp180_module_fini(bmp180_module_st *bmp180) {
  * ultra high resolution    3           25.5
  */
 static int s_get_conversion_time(short OSS) {
-    if (OSS < ULTRA_LOW_POWER || OSS > ULTRA_HIGH_RESOLUTION)
-        OSS = ULTRA_LOW_POWER;
+    if (OSS < BMP180_ULTRA_LOW_POWER || OSS > BMP180_ULTRA_HIGH_RESOLUTION)
+        OSS = BMP180_ULTRA_LOW_POWER;
     return g_conversion_time_table[OSS];
 }
 
@@ -224,3 +224,23 @@ static long s_read_raw_pressure(bmp180_module_st *bmp180) {
                                         (BMP180_CALCULATE_TRUE_P - bmp180->OSS);
     return UP;
 }
+
+#ifdef XTEST
+
+int main() {
+    bmp180_data_st value;
+    bmp180_module_st *test_bmp180 = bmp180_module_init(0);
+    if (bmp180_read_data(test_bmp180, &value) == 0) {
+        printf("SUCCESS!\n");
+        printf("Temperature: %.2f\nAltitude: %.2f\nPressure: %.2f\n",
+            value.temperature, value.altitude, value.pressure);
+    } else {
+        printf("FAILED\n");
+    }
+
+    bmp180_module_fini(test_bmp180);
+
+    return 0;
+}
+
+#endif

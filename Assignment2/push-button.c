@@ -10,10 +10,10 @@
 #include <signal.h>
 #include <wiringPi.h>
 
-#define MAX_LIGHT_BOUNDRY 7         // LED from 0 - 7, 8 in total.
-#define BUTTON_PORT 8               // Button input on 8.
-#define BLINK_INTERVAL 100          // Blink delay time
-#define INTERRUPT_INTERVAL 200      // Bouncing Interval
+#define MAX_LIGHT_BOUNDRY   (4)     // LED from 0 - 7, 8 in total.
+#define BUTTON_PORT         (4)     // Button input on 8.
+#define BLINK_INTERVAL      (100)   // Blink delay time
+#define INTERRUPT_INTERVAL  (200)   // Bouncing Interval
 
 /**
  * @brief LED direction, 
@@ -24,14 +24,19 @@
 static volatile int g_direction = 0;
 
 /**
+ * @brief led number lookup table.
+ */
+const static unsigned int g_led_numbers[MAX_LIGHT_BOUNDRY + 1] = {7, 0, 2, 3, 25};
+
+/**
  * @brief Reset All LEDs to 0.
  * @param sig valid signal number
  */
 void resetAllLEDs (int sig) {
     int i;
     for (i = 0; i <= MAX_LIGHT_BOUNDRY; ++i) {
-        pinMode(i, OUTPUT);
-        digitalWrite(i, 0);
+        pinMode(g_led_numbers[i], OUTPUT);
+        digitalWrite(g_led_numbers[i], 0);
     }
     exit(sig);
 }
@@ -72,8 +77,9 @@ int main (void)
         return errno;
 
     for (i = 0; i <= MAX_LIGHT_BOUNDRY; ++i) {
-        pinMode(i, OUTPUT);
-        digitalWrite(i, 0);
+        led = g_led_numbers[i];
+        pinMode(led, OUTPUT);
+        digitalWrite(led, 0);
     }
 
     // Main Loop
@@ -87,6 +93,7 @@ int main (void)
             // otherwise, keep the original number.
             if (g_direction != 0)
                 led = MAX_LIGHT_BOUNDRY - i;
+            led = g_led_numbers[led];
             // blink the LED
             digitalWrite(led, 1);
             delay(BLINK_INTERVAL);

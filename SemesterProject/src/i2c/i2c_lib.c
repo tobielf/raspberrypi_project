@@ -23,7 +23,7 @@
  */
 void i2c_write(int fd, int value) {
     if (wiringPiI2CWrite(fd, value) == -1) {
-        printf("%s\n", strerror(errno));
+        printf("Write Failed: %s\n", strerror(errno));
         exit(errno);
     }
 }
@@ -41,7 +41,7 @@ int i2c_read(int fd) {
     int ret_val;
 
     if ((ret_val = wiringPiI2CRead(fd)) == -1) {
-        printf("%s\n", strerror(errno));
+        printf("Read Failed: %s\n", strerror(errno));
         exit(errno);
     }
     return ret_val;
@@ -58,7 +58,7 @@ int i2c_read(int fd) {
  */
 void i2c_write_8bits(int fd, int reg, int value) {
     if (wiringPiI2CWriteReg8(fd, reg, value) == -1) {
-        printf("%s\n", strerror(errno));
+        printf("Write Failed: %s\n", strerror(errno));
         exit(errno);
     }
 }
@@ -75,7 +75,7 @@ int i2c_read_8bits(int fd, int reg) {
     int ret_val;
 
     if ((ret_val = wiringPiI2CReadReg8(fd, reg)) == -1) {
-        printf("%s\n", strerror(errno));
+        printf("Read Failed: %s\n", strerror(errno));
         exit(errno);
     }
     return ret_val;
