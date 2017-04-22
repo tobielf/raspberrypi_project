@@ -4,7 +4,7 @@
  *      1. Alarm System (Motion detector, Mecury switch, MCP3208 ADC[Brightness, Threshold])
  *      2. Screen Display (Update display)
  *      3. Temperature setup_motor_event(base);
- *      5. Web Server for Siri. (LED lights, MCP3208 ADC[status])
+ *      4. Web Server for Siri. (LED lights, MCP3208 ADC[status])
     web_server_init(base);
  * @author Xiangyu Guo
  */

@@ -1,0 +1,1 @@
+find ./src -name "*.*" | xargs cat | wc -l

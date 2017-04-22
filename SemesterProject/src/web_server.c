@@ -57,9 +57,8 @@ static void setup_wiringPi(void);
 /**
  * @brief setting up the web server
  * @param base event base.
- * @return 0 on success, otherwise errno
  */
-int web_server_init(struct event_base *base) {
+void web_server_init(struct event_base *base) {
     struct evhttp *http;
     struct evhttp_bound_socket *handle;
 
@@ -71,7 +70,7 @@ int web_server_init(struct event_base *base) {
     http = evhttp_new(base);
     if (!http) {
         fprintf(stderr, "couldn't create evhttp. Exiting.\n");
-        return errno;
+        exit(errno);
     }
 
     
@@ -96,9 +95,8 @@ int web_server_init(struct event_base *base) {
     handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
     if (!handle) {
         fprintf(stderr, "couldn't bind to port %d. Exiting.\n", (int)port);
-        return errno;
+        exit(errno);
     }
-    return 0;
 }
 
 static void

@@ -105,7 +105,7 @@ static void display_mcp3208(int data);
 static screen_page_st g_pages[] = { { display_time   , 0 },
                                     { display_bmp180 , 0 },
                                     { display_dht11  , 0 },
-                                    { display_mcp3208, 0 } };
+                                    { display_mcp3208, 0 }};
 
 /**
  * @brief get one screen display instance

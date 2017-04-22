@@ -9,8 +9,7 @@
 /**
  * @brief setting up the web server
  * @param base event base.
- * @return 0 on success, otherwise errno
  */
-int web_server_init(struct event_base *base);
+void web_server_init(struct event_base *base);
 
 #endif
