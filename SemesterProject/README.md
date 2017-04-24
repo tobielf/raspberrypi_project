@@ -1,19 +1,19 @@
-#Smarthomd#
+#Smarthomd
 ---
-##Hardware Connection##
+##Hardware Connection
 **Using WiringPi number**
 
-###LED pins###
+###LED pins
 Pin 7, 0, 2, 3, 25.
 
-###SPI pins###
+###SPI pins
 MOSI MISO SCLK 3V3
 
 SPI Module: 
 
 MCP3208 - 8Channel Analog Digital Converter.
 
-###I2C pins###
+###I2C pins
 SDA SCL
 
 I2C Module: 
@@ -22,25 +22,25 @@ BMP180 - Temperature and Pressure Sensor.
 
 LCD1602 - 2 Line 16 Characters LCD Display.
 
-###L293D pins###
+###L293D pins
 Pin 21(LEFT), 22(RIGHT), 23(ENABLE)
 
-###Button pins###
+###Button pins
 Pin 6(UP), 5(DOWN), 26(LEFT), 4(RIGHT)
 
-###Alarm Light###
+###Alarm Light
 Pin 24
 
-###Mecury Switcher###
+###Mecury Switcher
 Pin 27
 
-###DHT11###
+###DHT11
 Pin 28
 
-###Motion Detector###
+###Motion Detector
 Pin 29
 
-##Software Setting##
+##Software Setting
 1. How to build.
 Command `make` will take over everything.
 Just go to the folder "src" and type: `make`
