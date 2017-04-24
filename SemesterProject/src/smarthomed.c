@@ -30,8 +30,9 @@
 #include "screen.h"
 #include "web_server.h"
 
-#define MOTION_DETECTOR     (29)        /**< */
-#define MECURY_SWITCH       (27)        /**< */
+#define MOTION_DETECTOR     (29)        /**< wiringPi pin number of motion detector */
+#define MECURY_SWITCH       (27)        /**< wiringPi pin number of mecury switch */
+#define ALARM_LIGHT         (24)        /**< wiringPi pin number of alarm light */
 
 #define INTERRUPT_INTERVAL  (200)       /**< Bouncing Interval */
 
@@ -66,9 +67,9 @@ void isr_motion_detector (void) {
                 digitalRead(MECURY_SWITCH), brightness, brightness_threshold);
         // Check with Mercury Switcher.
         if (digitalRead(MECURY_SWITCH) == 0 && brightness < brightness_threshold) {
-            digitalWrite(24, 1);
+            digitalWrite(ALARM_LIGHT, 1);
         } else {
-            digitalWrite(24, 0);
+            digitalWrite(ALARM_LIGHT, 0);
         }
 
         // Update time
@@ -82,7 +83,7 @@ static void setup_alram_system() {
         exit(errno);
 
     pinMode(MECURY_SWITCH, INPUT);
-    pinMode(24, OUTPUT);
+    pinMode(ALARM_LIGHT, OUTPUT);
 
     if (wiringPiISR(MOTION_DETECTOR, INT_EDGE_FALLING, &isr_motion_detector) < 0)
         exit(errno);
