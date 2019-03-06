@@ -32,6 +32,8 @@
 
 #define LED_STATUS_THRESHOLD    (100)   /**< LED off status */
 
+#define POWER_PIN               (24)    /**< wiringPi pin number of power */
+
 const int g_led_pins[MAX_LIGHT_BOUNDRY + 1] = {7, 0, 2, 3, 25}; /**< LED on GPIO*/
 
 /**
@@ -39,6 +41,8 @@ const int g_led_pins[MAX_LIGHT_BOUNDRY + 1] = {7, 0, 2, 3, 25}; /**< LED on GPIO
  * Call back functions handle the http request
  * ===========================================
  */
+static void power_request_cb(struct evhttp_request *req, void *arg);
+
 static void switch_request_cb(struct evhttp_request *req, void *arg);
 
 static void status_request_cb(struct evhttp_request *req, void *arg);
@@ -73,18 +77,23 @@ void web_server_init(struct event_base *base) {
         exit(errno);
     }
 
+    evhttp_set_cb(http, "/power/on", power_request_cb, "on");
+
+    evhttp_set_cb(http, "/power/off", power_request_cb, "off");
+
+    evhttp_set_cb(http, "/power/status", power_request_cb, "status");
     
-    evhttp_set_cb(http, "/status", status_request_cb, NULL);
+    //evhttp_set_cb(http, "/status", status_request_cb, NULL);
 
-    evhttp_set_cb(http, "/switch/on", switch_request_cb, "on");
+    //evhttp_set_cb(http, "/switch/on", switch_request_cb, "on");
 
-    evhttp_set_cb(http, "/switch/off", switch_request_cb, "off");
+    //evhttp_set_cb(http, "/switch/off", switch_request_cb, "off");
 
-    evhttp_set_cb(http, "/motor/on", switch_request_cb, "on");
+    //evhttp_set_cb(http, "/motor/on", switch_request_cb, "on");
 
-    evhttp_set_cb(http, "/motor/off", switch_request_cb, "off");
+    //evhttp_set_cb(http, "/motor/off", switch_request_cb, "off");
 
-    evhttp_set_cb(http, "/temp/status", temperature_request_cb, NULL);
+    //evhttp_set_cb(http, "/temp/status", temperature_request_cb, NULL);
 
     evhttp_set_cb(http, "/temp_humi/status", temp_humi_request_cb, NULL);
 
@@ -97,6 +106,25 @@ void web_server_init(struct event_base *base) {
         fprintf(stderr, "couldn't bind to port %d. Exiting.\n", (int)port);
         exit(errno);
     }
+    printf("server started\n");
+}
+
+static void
+power_request_cb(struct evhttp_request *req, void *arg)
+{
+    struct evbuffer *evb = NULL;
+
+    if (strcmp(arg, "on") == 0) {
+        digitalWrite(POWER_PIN, 1);
+    } else if (strcmp(arg, "off") == 0) {
+        digitalWrite(POWER_PIN, 0);
+    } else {
+        evb = evbuffer_new();
+        evbuffer_add_printf(evb, "%d\n", digitalRead(POWER_PIN));
+    }
+    evhttp_send_reply(req, 200, "OK", NULL);
+    if (evb != NULL)
+        evbuffer_free(evb);
 }
 
 static void
