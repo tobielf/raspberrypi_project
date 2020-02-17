@@ -122,7 +122,7 @@ power_request_cb(struct evhttp_request *req, void *arg)
         evb = evbuffer_new();
         evbuffer_add_printf(evb, "%d\n", digitalRead(POWER_PIN));
     }
-    evhttp_send_reply(req, 200, "OK", NULL);
+    evhttp_send_reply(req, 200, "OK", evb);
     if (evb != NULL)
         evbuffer_free(evb);
 }
